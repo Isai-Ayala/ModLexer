@@ -17,6 +17,7 @@ struct var
 {
 	char type;
 	int dir;
+	std::string name;
 };
 
 std::vector<var> vars(); 
@@ -65,8 +66,8 @@ int declaration()
 	{
 		if(tempToken.compare("int") == 0)
 		{
-			var.type = 'i';
-			var.dir = dataLength;
+			tempVar.type = 'i';
+			tempVar.dir = dataLength;
 			dataLength += 4; //HOOOOOOOOOOOOOOOOOOOOOOOOLD
 
 		}

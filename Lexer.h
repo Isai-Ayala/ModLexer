@@ -13,6 +13,8 @@ public:
 	std::string getToken();
 
 	bool getError();
+	int lineCount;
+	int colCount;
 
 };
 

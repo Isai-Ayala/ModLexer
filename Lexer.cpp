@@ -10,8 +10,7 @@
 #include <algorithm>
 #include "Lexer.h"
 
-int lineCount = 0;
-int colCount = 1;
+
 bool error = false;
 bool stringmode = false;
 bool charmode = false;
@@ -23,6 +22,8 @@ std::string line = "";
 std::string token;
 lexer::lexer(int argc, char *argv[])
 {
+	lineCount = 0;
+	colCount = 0;
 	if(argc > 1)
 		ifs.open(argv[1]);
 	else

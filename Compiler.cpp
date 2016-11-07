@@ -15,16 +15,18 @@ std::string tempToken;
 
 struct var
 {
-	std::string name;
+	char type;
 	int dir;
 };
 
 std::vector<var> vars(); 
+lexer *lex;
+
+int dataLength = 0;
 
 
 int main(int argc, char *argv[])
 {
-	lexer *lex;
 	lex = new lexer(argc, argv);
 	if(lex->getError())
 	{
@@ -34,28 +36,69 @@ int main(int argc, char *argv[])
 
 	if(lex -> nextToken() && lex -> getToken().compare("BEGIN") == 0)
 	{
-		if(parsing())
+		if(lex->nextToken())
+		{
+			if(parsing())
+				return 1;
+		}
+		else
+		{
+			std::cout << "end of program not found";
 			return 1;
+		}
 	}
 	else
 	{
-		std::cout << "file beginning not found";
+		std::cout << "beginning of program not found";
 		return 1;
 	}
+
+	std::cout << "end of program!" << std::endl;
  
 	return 0;
 }  //int main(int argc, char *argv[])
 
+int declaration()
+{
+	var tempVar;
+	while(expect("int") || expect("double") || expect("float") || expect("string") || expect("char"))
+	{
+		if(tempToken.compare("int") == 0)
+		{
+			var.type = 'i';
+			var.dir = dataLength;
+			dataLength += 4; //HOOOOOOOOOOOOOOOOOOOOOOOOLD
+
+		}
+
+	}
+	return 0;
+}  //int declaration()
+
 int parsing()
 {
 	tempToken = lex->getToken();
-	while(tempToken.compare("END") != 0)
+	if(declaration())
+		return 1;
+	while(expect("END"))
 	{
+
 		if(!lex->nextToken())
+		{
+			std::cout << "end of file not found";
 			return 1;
+		}
+		tempToken = lex->getToken();
 	}
 	return 0;
 }  //int parsing()
+
+bool expect(std::string token)
+{
+	if(tempToken.compare(token))
+		return false;
+	return true;
+}  //bool expect(std::string token)
 
 /*
 void tokenNames()

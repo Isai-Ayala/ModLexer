@@ -105,7 +105,7 @@ std::string lexer::getToken()
 
 	if(line[colCount] == '.' || line[colCount] == ';' || line[colCount] == '(' || line[colCount] == ')' || line[colCount] == '{' 
 		|| line[colCount] == '}' || line[colCount] == '[' || line[colCount] == ']' || line[colCount] == '/' || line[colCount] == '*' 
-		|| line[colCount] == '%' || line[colcount] == ',')
+		|| line[colCount] == '%' || line[colCount] == ',')
 	{
 		token += line[colCount++];
 		return token;

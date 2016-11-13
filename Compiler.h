@@ -16,6 +16,16 @@ int factor();
 int num();
 int init(int argc, char *argv[]);
 int vardir();
+void emitBuffer();
+bool isReal();
+int pop(int tempIndex);
+int pushnumassignment();
+int varDir();
+bool nextToken();
+void pushvar(int varindex);
+int printVar(int varindex);
+int getArrIndex(int t);
+int print();
 
 
 #endif

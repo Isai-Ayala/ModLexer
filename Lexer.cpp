@@ -187,5 +187,6 @@ std::string lexer::getToken()
 	default: return "error";
 	break;
 	}
+	std::cerr << "next token is " << token << "\n";
 	return token;
 }  //std::string getToken()

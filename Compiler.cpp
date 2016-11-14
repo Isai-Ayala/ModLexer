@@ -128,8 +128,15 @@ int num()
 		tempToken = lex->getToken();
 		if(operation())
 			return 1;
-		if(expect(")"))
-			return 0;
+		if(!expect(")"))
+		{
+			std::cout << "no closing parenthesis found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+			return 1;
+		}
+		if(!nextToken())
+			return 1;
+		tempToken = lex->getToken();
+		return 0;
 	}
 	if(isName() == 1)
 	{
@@ -194,13 +201,10 @@ int factor()
 		else
 			mulop = 63;
 		if(!nextToken())
-		{
 			return 1;
-		}
-		if(!num())
+		tempToken = lex->getToken();
+		if(num())
 			return 1;
-		if(!nextToken())
-			tempToken = lex->getToken();
 		fileBuf[actualDir++] = (char)mulop;
 	}
 	return 0;
@@ -219,11 +223,9 @@ int operation()
 			addop = 60;
 		if(!nextToken())
 			return 1;
-		if(!factor())
-			return 1;
-		if(!nextToken())
-			return 1;
 		tempToken = lex->getToken();
+		if(factor())
+			return 1;
 		fileBuf[actualDir++] = (char)addop;
 	}
 	return 0;

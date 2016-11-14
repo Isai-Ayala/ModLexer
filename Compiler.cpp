@@ -775,44 +775,46 @@ bool expect(std::string token)
 
 int declaration()
 {
-	var tempVar;
 	int tempSize;
 	while(expect("int") || expect("double") || expect("float") || expect("string") || expect("char"))
 	{
-		if(expect("int"))
-		{
-			tempSize = 4;
-			tempVar.size = 4;
-			tempVar.type = 'i';
-			tempVar.dir = dataLength;
-			tempVar.isArray = false;
-		}
-		if(expect("double"))
-		{
-			tempSize = 8;
-			tempVar.size = 8;
-			tempVar.type = 'd';
-			tempVar.dir = dataLength;
-			tempVar.isArray = false;
-		}
-		if(expect("float"))
-		{
-			tempSize = 4;
-			tempVar.size = 4;
-			tempVar.type = 'f';
-			tempVar.dir = dataLength;
-			tempVar.isArray = false;
-		}
-		if(expect("char"))
-		{
-			tempSize = 1;
-			tempVar.size = 1;
-			tempVar.type = 'c';
-			tempVar.dir = dataLength;
-			tempVar.isArray = false;
-		}
+		std::cout << "actual size is " << dataLength << std::endl;
+		std::string temptype = tempToken;
 		do
 		{
+			var tempVar;
+			if(temptype == "int")
+			{
+				tempSize = 4;
+				tempVar.size = 4;
+				tempVar.type = 'i';
+				tempVar.dir = dataLength;
+				tempVar.isArray = false;
+			}
+			if(temptype == "double")
+			{
+				tempSize = 8;
+				tempVar.size = 8;
+				tempVar.type = 'd';
+				tempVar.dir = dataLength;
+				tempVar.isArray = false;
+			}
+			if(temptype == "float")
+			{
+				tempSize = 4;
+				tempVar.size = 4;
+				tempVar.type = 'f';
+				tempVar.dir = dataLength;
+				tempVar.isArray = false;
+			}
+			if(temptype == "char")
+			{
+				tempSize = 1;
+				tempVar.size = 1;
+				tempVar.type = 'c';
+				tempVar.dir = dataLength;
+				tempVar.isArray = false;
+			}
 			if(!nextToken())
 				return 1;
 				tempToken = lex->getToken();
@@ -867,11 +869,10 @@ void fileHeader()
 	fout << tchar;
 	tchar = dataLength;
 	fout << tchar;
-	tchar = actualDir>>8;
+	tchar = (actualDir+8)>>8;
 	fout << tchar;
-	tchar = actualDir;
+	tchar = (actualDir+8);
 	fout << tchar;
-
 
 	for(int i = 0; i < actualDir; i++)
 		fout << fileBuf[i];

@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 
 	if(parsing())
 	{
-		//return 1;
+		return 1;
 	}
 
 	fileHeader();
@@ -73,8 +73,91 @@ int main(int argc, char *argv[])
 	return 0;
 }  //int main(int argc, char *argv[])
 
+int whileStatement()
+{
+	tag tempTag, tempTag2;
+	stringstream ss;
+	ss << tags.size();
+	tempTag.name = ss.str();
+	tempTag.dir = actualDir;
+	tags.push_back(tempTag);
+	int ans = logicOperation();
+	if(ans < 0)
+		return 1;
+	fileBuf[actualDir++] = (char)PUSHKI;
+	for(int i = 3; i >= 0; i--)
+		fileBuf[actualDir++] = (char)(1>>(8*i));
+	fileBuf[actualDir++] = (char)CMP;
+	ss << tags.size();
+	tempTag2.name = ss.str();
+	ans = tags.size();
+	tags.push_back(tempTag2);
+	fileBuf[actualDir++] = (char)JMPLT;
+	int tempdir = actualDir;
+	actualDir += 2;
+	if(expect("{"))
+	{
+		if(!nextToken())
+			return -1;
+		tempToken = lex->getToken();
+		while(!expect("}"))
+		{
+			if(instruction())
+				return -1;
+		}
+		if(!nextToken())
+			return -1;
+		tempToken = lex->getToken();
+	}
+	else
+	{
+		if(instruction())
+			return -1;
+	}
+	fileBuf[actualDir++] = (char)JMP;
+	fileBuf[actualDir++] = (char)tempTag.dir>>8;
+	fileBuf[actualDir++] = (char)tempTag.dir;
+	tags[ans].dir = actualDir;
+	fileBuf[tempdir++] = (char)actualDir>>8;
+	fileBuf[tempdir] = (char)actualDir;
+	return 0;
+}  //int whileStatement()
+
 int instruction()
 {
+	if(expect("while") || expect("for"))
+	{
+		int ltype = 0;
+		if(expect("for"))
+			ltype = 1;
+		if(!nextToken())
+		{
+			sError = true;
+			return 1;
+		}
+		tempToken = lex->getToken();
+		if(!expect("("))
+		{
+			sError = true;
+			std::cout << "no opening parenthesis at beginning of loop statement at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+			return 1;
+		}
+		if(!nextToken())
+		{
+			sError = true;
+			return 1;
+		}
+		tempToken = lex->getToken();
+		if(!ltype)
+		{
+			if(whileStatement())
+			{
+				sError = true;
+				return 1;
+			}
+		}
+	}
+
 	if(isName() == 1)
 	{
 		if(assignment())
@@ -86,6 +169,7 @@ int instruction()
 		std::cout << "ping\n";
 		return 0;
 	}
+
 	if(expect("print") || expect("println"))
 	{
 		bool ln = false;
@@ -100,6 +184,7 @@ int instruction()
 			fileBuf[actualDir++] = (char)PRTCR;
 		return 0;
 	}
+
 	if(expect("if"))
 	{
 		if(!nextToken())
@@ -125,9 +210,9 @@ int instruction()
 			sError = true;
 			return 1;
 		}
-		std::cout << "temptoken " << tempToken << std::endl;
 		return 0;
 	}
+
 	return 0;
 }  //int instruction()
 
@@ -474,8 +559,6 @@ int printVar(int varindex)
 	return 0;
 }  //void printVar(int varindex)
 
-
-
 int makeJumps(int cmpType, bool isNot) // > es 1, >= es 2, < es 3, <= es 4, == es 5, != es 6, -1 es error
 {
 	int ans;
@@ -612,7 +695,10 @@ int conditionalStatement()
 		fileBuf[actualDir++] = (char)(1>>(8*i));
 	fileBuf[actualDir++] = (char)CMP;
 	ss << tags.size();
+	ans = tags.size();
 	tempTag.name = ss.str();
+	tags.push_back(tempTag);
+
 	fileBuf[actualDir++] = (char)JMPLT;
 	int tempdir = actualDir;
 	actualDir += 2;
@@ -635,18 +721,19 @@ int conditionalStatement()
 		if(instruction())
 			return -1;
 	}
-	tempTag.dir = actualDir;
+	tags[ans].dir = actualDir;
 	if(expect("else"))
-		tempTag.dir+=3; 
-	tags.push_back(tempTag);
+		tags[ans].dir+=3; 
 	wtf = tempdir;
-	fileBuf[tempdir++] = (char)tempTag.dir>>8;
-	fileBuf[tempdir] = (char)tempTag.dir;
+	fileBuf[tempdir++] = (char)tags[ans].dir>>8;
+	fileBuf[tempdir] = (char)tags[ans].dir;
 	if(expect("else"))
 	{
 		fileBuf[actualDir++] = (char)JMP;
 		ss << tags.size();
+		ans = tags.size();
 		tempTag.name = ss.str();
+		tags.push_back(tempTag);
 		tempdir = actualDir;
 		actualDir+=2;
 		if(!nextToken())
@@ -671,10 +758,9 @@ int conditionalStatement()
 			if(instruction())
 				return -1;
 		}
-		tempTag.dir = actualDir;
-		tags.push_back(tempTag);
-		fileBuf[tempdir++] = (char)tempTag.dir>>8;
-		fileBuf[tempdir] = (char)tempTag.dir;
+		tags[ans].dir = actualDir;
+		fileBuf[tempdir++] = (char)tags[ans].dir>>8;
+		fileBuf[tempdir] = (char)tags[ans].dir;
 	}
 	return 0;
 }  //int conditionalStatement()

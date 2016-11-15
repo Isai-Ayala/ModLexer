@@ -31,6 +31,7 @@ int compareResult();
 int logicOperation();
 int makeJumps(int cmpType, bool isNot);
 void callCode();
+int whileStatement();
 
 
 #endif

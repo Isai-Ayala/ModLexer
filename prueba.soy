@@ -1,13 +1,13 @@
 BEGIN
-	int x, y, z;
-	x = 4;
-	if(2==2 && 1<2 && x == 4)
+	int x, y;
+	x = 0;
+	while(x < 10)
 	{
-		println("hey world!");
+		if(x < 5)
+			println("x = ", x);
+		else
+			println("numero mayor a 4");
+		x = x + 1;
 	}
-	else
-	{
-		println("functional and");
-	}
-	println("success!");
+	println("successful loop!");
 END

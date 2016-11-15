@@ -11,10 +11,12 @@
 #include "Lexer.h"
 #include "Compiler.h"
 #include "conversion.h"
+#include <sstream>
 
 
 enum COMMANDS {HALT, PRTCR, PRTC, PRTI, PRTF, PRTD, PRTS, PRTAC, PRTAI, PRTAF, PRTAD, PRTAS, PUSHC, PUSHI, PUSHF, PUSHD, PUSHS, PUSHAC, PUSHAI, PUSHAF, PUSHAD, PUSHAS, PUSHKC, PUSHKI, PUSHKF, PUSHKD, PUSHKS, POPC, POPI, POPF, POPD, POPS, POPX, POPAC, POPAI, POPAF, POPAD, POPAS, RDC, RDI, RDF, RDD, RDS, RDAC, RDAI, RDAF, RDAD, RDAS, JMP, JMPEQ, JMPNE, JMPGT, JMPGE, JMPLT, JMPLE, STX, STKX, INC, DEC, ADD, SUB, MUL, DIV, MOD, CMP, PRTM, MOVY, POPY};
 
+int wtf;
 std::string tempToken;
 std::ofstream fout;
 char fileBuf[10000];
@@ -38,6 +40,13 @@ struct var
 	std::string s;
 };
 
+struct tag
+{
+	std::string name;
+	int dir;
+};
+
+std::vector<tag> tags;
 std::vector<var> vars; 
 lexer *lex;
 
@@ -54,7 +63,7 @@ int main(int argc, char *argv[])
 
 	if(parsing())
 	{
-//		return 1;
+		//return 1;
 	}
 
 	fileHeader();
@@ -74,17 +83,49 @@ int instruction()
 			sError = true;
 			return 1;
 		}
+		std::cout << "ping\n";
 		return 0;
 	}
-	if(tempToken == "print" || tempToken == "println")
+	if(expect("print") || expect("println"))
 	{
 		bool ln = false;
-		if(tempToken == "println")
+		if(expect("println"))
 			ln = true;
 		if(print())
+		{
+			sError = true;
 			return 1;
+		}
 		if(ln)
 			fileBuf[actualDir++] = (char)PRTCR;
+		return 0;
+	}
+	if(expect("if"))
+	{
+		if(!nextToken())
+		{
+			sError = true;
+			return 1;
+		}
+		tempToken = lex->getToken();
+		if(!expect("("))
+		{
+			sError = true;
+			std::cout << "no opening parenthesis at beginning of if statement at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+			return 1;
+		}
+		if(!nextToken())
+		{
+			sError = true;
+			return 1;
+		}
+		tempToken = lex->getToken();
+		if(conditionalStatement())
+		{
+			sError = true;
+			return 1;
+		}
+		std::cout << "temptoken " << tempToken << std::endl;
 		return 0;
 	}
 	return 0;
@@ -118,235 +159,6 @@ int parsing()
 		return 1;
 	}
 }  //int parsing()
-
-int num()
-{
-	if(expect("("))
-	{
-		if(!nextToken())
-			return 1;
-		tempToken = lex->getToken();
-		if(operation())
-			return 1;
-		if(!expect(")"))
-		{
-			std::cout << "no closing parenthesis found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
-			return 1;
-		}
-		if(!nextToken())
-			return 1;
-		tempToken = lex->getToken();
-		return 0;
-	}
-	if(isName() == 1)
-	{
-		pushvar(varDir());
-		if(!nextToken())
-			return 1;
-		tempToken = lex->getToken();
-		return 0;
-	}
-	std::string tempToken2;
-	std::string switchstring;
-	if(tempToken == "-")
-	{
-		if(!nextToken())
-			return 1;
-		switchstring = "-";
-		tempToken = lex->getToken();
-	}
-	if(!isNumber())
-	{
-		std::cout << "invalid number format at line " << lex->lineCount << " column " << lex->colCount << std::endl;
-		return 1;
-	}
-	switchstring.append(tempToken);
-	if(!nextToken())
-		return 1;
-	tempToken = lex->getToken();
-	if(tempToken == ".")
-	{
-		switchstring.append(".");
-		if(!nextToken())
-			return 1;
-		tempToken = lex->getToken();
-		if(!isNumber())
-		{
-			std::cout << "invalid number format at line " << lex->lineCount << " column " << lex->colCount << std::endl;
-			return 1;
-		}
-		switchstring.append(tempToken);
-		if(!nextToken())
-			return 1;
-		tempToken = lex->getToken();
-	}
-	tempToken2 = tempToken;
-	tempToken = switchstring; 
-	pushnumassignment(); 
-	tempToken = tempToken2;
-	return 0;
-}  //int num()
-
-int factor()
-{
-	int mulop;
-	if(num())
-		return 1;
-	while(tempToken == "*" || tempToken == "/" || tempToken == "%%")
-	{
-		if(tempToken == "*")
-			mulop = 61;
-		else if(tempToken == "/")
-			mulop = 62;
-		else
-			mulop = 63;
-		if(!nextToken())
-			return 1;
-		tempToken = lex->getToken();
-		if(num())
-			return 1;
-		fileBuf[actualDir++] = (char)mulop;
-	}
-	return 0;
-}  //int factor()
-
-int operation()
-{
-	int addop;
-	if(factor())
-		return 1;
-	while(tempToken == "+" || tempToken == "-")
-	{
-		if(tempToken == "+")
-			addop = 59;
-		else
-			addop = 60;
-		if(!nextToken())
-			return 1;
-		tempToken = lex->getToken();
-		if(factor())
-			return 1;
-		fileBuf[actualDir++] = (char)addop;
-	}
-	return 0;
-}  //int operation()
-
-int assignment()
-{
-	int tempIndex = varDir();
-	if(tempIndex < 0)
-	{
-		std::cout << "invalid id at line " << lex->lineCount << " column " << lex->colCount << std::endl;
-		return 1;
-	}
-	gType = vars[tempIndex].type;
-	if(vars[tempIndex].isArray)
-		getArrIndex(2);
-	if(!lex->nextToken() || lex->getToken() != "=" || !lex->nextToken())
-	{
-		std::cout << "no \"=\" sign found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
-		return 1;
-	}
-	tempToken = lex->getToken();
-	if(operation())
-		return 1;
-	std::cout << "popvar assy instruction" << std::endl;
-	if(vars[tempIndex].isArray)
-		fileBuf[actualDir++] = (char)MOVY;
-	if(pop(tempIndex))
-		return 1;
-	fileBuf[actualDir++] = tempint;
-	tempint = vars[tempIndex].dir;
-	fileBuf[actualDir++] = (char)tempint>>8;
-	fileBuf[actualDir++] = (char)tempint;
-	if(tempToken != ";")
-	{
-		std::cout << "invalid token found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
-		return 1;
-	}
-	std::cout << "ping\n";
-	if(!nextToken())
-		return 1;
-	tempToken = lex->getToken();
-	return 0;
-}  //int assignment()
-
-
-int getArrIndex(int t) //t == 1 assigning side of equation, t == 2 assigned side of equation
-{
-	if(!nextToken())
-		return -1;
-	if(lex->getToken() != "[")
-	{
-		std::cout << "no \"[\" token found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
-		return -1;
-	}
-	if(!nextToken())
-		return -1;
-	tempToken = lex->getToken();
-	int arrIndex = 0;
-	if(!isNumber())
-	{
-		arrIndex = varDir();
-		int tempdir = vars[arrIndex].dir;
-		if(isName() != 1)
-		{
-			std::cout << "invalid array index found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
-			return -1;
-		}
-		if(vars[arrIndex].type != 'i')
-		{
-			std::cout << "invalid array index at line " << lex->lineCount << " column " << lex->colCount << std::endl;
-			return -1;
-		}
-		if(vars[arrIndex].isArray)
-		{
-			arrIndex = getArrIndex(1);
-			if(arrIndex < 0)
-				return -1;
-			fileBuf[actualDir++] = (char)PUSHAI;
-			fileBuf[actualDir++] = (char)tempdir>>8;
-			fileBuf[actualDir++] = (char)tempdir;
-			if(t == 1)
-				fileBuf[actualDir++] = (char)POPX;
-			else
-				fileBuf[actualDir++] = (char)POPY;
-		}
-		else
-		{
-			fileBuf[actualDir++] = (char)PUSHI;
-			fileBuf[actualDir++] = (char)tempdir>>8;
-			fileBuf[actualDir++] = (char)tempdir;
-			if(t == 1)
-				fileBuf[actualDir++] = (char)POPX;
-			else
-				fileBuf[actualDir++] = (char)POPY;
-		}
-	}
-	else
-	{
-		for(int i = 0; i < tempToken.length(); i++)
-		{
-			arrIndex *= 10;
-			arrIndex += (int)(tempToken[i]-'0');
-		}
-		fileBuf[actualDir++] = (char)PUSHKI;
-		for(int i = 3; i >= 0; i--)
-			fileBuf[actualDir++] = (char)arrIndex>>(8*i);
-		if(t == 1)
-			fileBuf[actualDir++] = (char)POPX;
-		else
-			fileBuf[actualDir++] = (char)POPY;
-	}
-	if(!nextToken())
-		return -1;
-	if(lex->getToken() != "]")
-	{
-		std::cout << "invalid token found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
- 		return -1;
-	}
-	return 0;
-}  //int getArrIndex()
 
 int codeblock()
 {
@@ -526,6 +338,14 @@ int pushnumassignment()
 			actualDir += 8;
 		}
 		break;
+		case 'x':
+		{
+			if(tempToken.find(".") == std::string::npos)
+				gType = 'i';
+			else
+				gType = 'd';
+			pushnumassignment();
+		}
 	}
 	return 0;
 }  //void pushnumassignment()
@@ -654,6 +474,211 @@ int printVar(int varindex)
 	return 0;
 }  //void printVar(int varindex)
 
+
+
+int makeJumps(int cmpType, bool isNot) // > es 1, >= es 2, < es 3, <= es 4, == es 5, != es 6, -1 es error
+{
+	int ans;
+	switch(cmpType)
+	{
+		case 1: fileBuf[actualDir++] = (char)JMPGT;
+			break;
+		case 2: fileBuf[actualDir++] = (char)JMPGE;
+			break;
+		case 3: fileBuf[actualDir++] = (char)JMPLT;
+			break;
+		case 4: fileBuf[actualDir++] = (char)JMPLE;
+			break;
+		case 5: fileBuf[actualDir++] = (char)JMPEQ;
+			break;
+		case 6: fileBuf[actualDir++] = (char)JMPNE;
+			break;
+		default: return -1;
+			break;
+	}
+	tag tempTag;
+	stringstream ss;
+	ss << tags.size();
+	tempTag.name = ss.str();
+	tempTag.dir = actualDir + 10;
+	tags.push_back(tempTag);
+	fileBuf[actualDir++] = (char)(tempTag.dir>>8);
+	fileBuf[actualDir++] = (char)tempTag.dir;
+	fileBuf[actualDir++] = (char)PUSHKI;
+	if(isNot)
+		ans = 1;
+	else
+		ans = 0;
+	for(int i = 3; i >= 0; i--)
+		fileBuf[actualDir++] = (char)(ans>>(8*i));
+	fileBuf[actualDir++] = (char)JMP;
+	ss << tags.size();
+	tempTag.name = ss.str();
+	tempTag.dir = actualDir + 7;
+	tags.push_back(tempTag);
+	fileBuf[actualDir++] = (char)(tempTag.dir>>8);
+	fileBuf[actualDir++] = (char)(tempTag.dir);
+	fileBuf[actualDir++] = (char)PUSHKI;
+	if(isNot)
+		ans = 0;
+	else
+		ans = 1;
+	for(int i = 3; i >= 0; i--)
+		fileBuf[actualDir++] = (char)(ans>>(8*i));
+	return 0;
+}  //int makeJumps(int cmpType, bool isNot)
+
+int logicOperation()
+{
+	int ans;
+	int cmpType;
+	bool isNot = false;
+	gType = 'x';
+	if(expect("!"))
+	{
+		isNot = !isNot;
+		if(!nextToken())
+			return -1;
+		tempToken = lex->getToken();
+	}
+	if(expect("("))
+	{
+		if(!nextToken())
+			return -1;
+		tempToken = lex->getToken();
+		ans = logicOperation();
+		if(!expect(")"))
+		{
+			std::cout << "no closing parenthesis found for inner operation in if statement at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+			return -1;
+		}
+		if(!nextToken())
+			return -1;
+		tempToken = lex->getToken();
+	}
+	else
+	{
+		if(operation())
+			return -1;
+		cmpType = compareResult();
+		if(!nextToken())
+			return -1;
+		tempToken = lex->getToken();
+		if(operation())
+			return -1;
+		fileBuf[actualDir++] = (char)CMP;
+		if(makeJumps(cmpType, isNot))
+			return -1;
+		ans = 1;
+	}
+	if(expect("||"))
+	{
+		if(!nextToken())
+			return 1;
+		tempToken = lex->getToken();
+		ans += logicOperation();
+		fileBuf[actualDir++] = (char)ADD;
+		return ans;
+	}
+	else if(expect("&&"))
+	{
+		if(!nextToken())
+			return 1;
+		tempToken = lex->getToken();
+		ans *= logicOperation();
+		fileBuf[actualDir++] = (char)MUL;
+		return ans;
+	}
+	if(!expect(")"))
+	{
+		std::cout << "no closing parenthesis for if statement at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+		return 1;
+	}
+	if(!nextToken())
+		return -1;
+	tempToken = lex->getToken();
+	return ans;
+}  //int logicOperation()
+
+int conditionalStatement()
+{
+	tag tempTag;
+	stringstream ss;
+	int ans = logicOperation();
+	if(ans < 0)
+		return 1;
+	fileBuf[actualDir++] = (char)PUSHKI;
+	for(int i = 3; i >= 0; i--)
+		fileBuf[actualDir++] = (char)(1>>(8*i));
+	fileBuf[actualDir++] = (char)CMP;
+	ss << tags.size();
+	tempTag.name = ss.str();
+	fileBuf[actualDir++] = (char)JMPLT;
+	int tempdir = actualDir;
+	actualDir += 2;
+	if(expect("{"))
+	{
+		if(!nextToken())
+			return -1;
+		tempToken = lex->getToken();
+		while(!expect("}"))
+		{
+			if(instruction())
+				return -1;
+		}
+		if(!nextToken())
+			return -1;
+		tempToken = lex->getToken();
+	}
+	else
+	{
+		if(instruction())
+			return -1;
+	}
+	tempTag.dir = actualDir;
+	if(expect("else"))
+		tempTag.dir+=3; 
+	tags.push_back(tempTag);
+	wtf = tempdir;
+	fileBuf[tempdir++] = (char)tempTag.dir>>8;
+	fileBuf[tempdir] = (char)tempTag.dir;
+	if(expect("else"))
+	{
+		fileBuf[actualDir++] = (char)JMP;
+		ss << tags.size();
+		tempTag.name = ss.str();
+		tempdir = actualDir;
+		actualDir+=2;
+		if(!nextToken())
+			return -1;
+		tempToken = lex->getToken();
+		if(expect("{"))
+		{
+			if(!nextToken())
+				return -1;
+			tempToken = lex->getToken();
+			while(!expect("}"))
+			{
+				if(instruction())
+					return -1;
+			}
+			if(!nextToken())
+				return -1;
+			tempToken = lex->getToken();
+		}
+		else
+		{
+			if(instruction())
+				return -1;
+		}
+		tempTag.dir = actualDir;
+		tags.push_back(tempTag);
+		fileBuf[tempdir++] = (char)tempTag.dir>>8;
+		fileBuf[tempdir] = (char)tempTag.dir;
+	}
+	return 0;
+}  //int conditionalStatement()
+
 int pop(int tempIndex)
 {
 	switch(vars[tempIndex].type)
@@ -773,12 +798,256 @@ bool expect(std::string token)
 	return true;
 }  //bool expect(std::string token)
 
+int num()
+{
+	if(expect("("))
+	{
+		if(!nextToken())
+			return 1;
+		tempToken = lex->getToken();
+		if(operation())
+			return 1;
+		if(!expect(")"))
+		{
+			std::cout << "no closing parenthesis found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+			return 1;
+		}
+		if(!nextToken())
+			return 1;
+		tempToken = lex->getToken();
+		return 0;
+	}
+	if(isName() == 1)
+	{
+		pushvar(varDir());
+		if(!nextToken())
+			return 1;
+		tempToken = lex->getToken();
+		return 0;
+	}
+	std::string tempToken2;
+	std::string switchstring;
+	if(tempToken == "-")
+	{
+		if(!nextToken())
+			return 1;
+		switchstring = "-";
+		tempToken = lex->getToken();
+	}
+	if(!isNumber())
+	{
+		std::cout << "invalid number format at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+		return 1;
+	}
+	switchstring.append(tempToken);
+	if(!nextToken())
+		return 1;
+	tempToken = lex->getToken();
+	if(tempToken == ".")
+	{
+		switchstring.append(".");
+		if(!nextToken())
+			return 1;
+		tempToken = lex->getToken();
+		if(!isNumber())
+		{
+			std::cout << "invalid number format at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+			return 1;
+		}
+		switchstring.append(tempToken);
+		if(!nextToken())
+			return 1;
+		tempToken = lex->getToken();
+	}
+	tempToken2 = tempToken;
+	tempToken = switchstring; 
+	pushnumassignment(); 
+	tempToken = tempToken2;
+	return 0;
+}  //int num()
+
+int factor()
+{
+	int mulop;
+	if(num())
+		return 1;
+	while(tempToken == "*" || tempToken == "/" || tempToken == "%%")
+	{
+		if(tempToken == "*")
+			mulop = 61;
+		else if(tempToken == "/")
+			mulop = 62;
+		else
+			mulop = 63;
+		if(!nextToken())
+			return 1;
+		tempToken = lex->getToken();
+		if(num())
+			return 1;
+		fileBuf[actualDir++] = (char)mulop;
+	}
+	return 0;
+}  //int factor()
+
+int operation()
+{
+	int addop;
+	if(factor())
+		return 1;
+	while(tempToken == "+" || tempToken == "-")
+	{
+		if(tempToken == "+")
+			addop = 59;
+		else
+			addop = 60;
+		if(!nextToken())
+			return 1;
+		tempToken = lex->getToken();
+		if(factor())
+			return 1;
+		fileBuf[actualDir++] = (char)addop;
+	}
+	return 0;
+}  //int operation()
+
+int assignment()
+{
+	int tempIndex = varDir();
+	if(tempIndex < 0)
+	{
+		std::cout << "invalid id at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+		return 1;
+	}
+	gType = vars[tempIndex].type;
+	if(vars[tempIndex].isArray)
+		getArrIndex(2);
+	if(!lex->nextToken() || lex->getToken() != "=" || !lex->nextToken())
+	{
+		std::cout << "no \"=\" sign found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+		return 1;
+	}
+	tempToken = lex->getToken();
+	if(operation())
+		return 1;
+	std::cout << "popvar assy instruction" << std::endl;
+	if(vars[tempIndex].isArray)
+		fileBuf[actualDir++] = (char)MOVY;
+	if(pop(tempIndex))
+		return 1;
+	fileBuf[actualDir++] = tempint;
+	tempint = vars[tempIndex].dir;
+	fileBuf[actualDir++] = (char)tempint>>8;
+	fileBuf[actualDir++] = (char)tempint;
+	if(tempToken != ";")
+	{
+		std::cout << "invalid token found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+		return 1;
+	}
+	if(!nextToken())
+		return 1;
+	tempToken = lex->getToken();
+	return 0;
+}  //int assignment()
+
+int getArrIndex(int t) //t == 1 assigning side of equation, t == 2 assigned side of equation
+{
+	if(!nextToken())
+		return -1;
+	if(lex->getToken() != "[")
+	{
+		std::cout << "no \"[\" token found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+		return -1;
+	}
+	if(!nextToken())
+		return -1;
+	tempToken = lex->getToken();
+	int arrIndex = 0;
+	if(!isNumber())
+	{
+		arrIndex = varDir();
+		int tempdir = vars[arrIndex].dir;
+		if(isName() != 1)
+		{
+			std::cout << "invalid array index found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+			return -1;
+		}
+		if(vars[arrIndex].type != 'i')
+		{
+			std::cout << "invalid array index at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+			return -1;
+		}
+		if(vars[arrIndex].isArray)
+		{
+			arrIndex = getArrIndex(1);
+			if(arrIndex < 0)
+				return -1;
+			fileBuf[actualDir++] = (char)PUSHAI;
+			fileBuf[actualDir++] = (char)tempdir>>8;
+			fileBuf[actualDir++] = (char)tempdir;
+			if(t == 1)
+				fileBuf[actualDir++] = (char)POPX;
+			else
+				fileBuf[actualDir++] = (char)POPY;
+		}
+		else
+		{
+			fileBuf[actualDir++] = (char)PUSHI;
+			fileBuf[actualDir++] = (char)tempdir>>8;
+			fileBuf[actualDir++] = (char)tempdir;
+			if(t == 1)
+				fileBuf[actualDir++] = (char)POPX;
+			else
+				fileBuf[actualDir++] = (char)POPY;
+		}
+	}
+	else
+	{
+		for(int i = 0; i < tempToken.length(); i++)
+		{
+			arrIndex *= 10;
+			arrIndex += (int)(tempToken[i]-'0');
+		}
+		fileBuf[actualDir++] = (char)PUSHKI;
+		for(int i = 3; i >= 0; i--)
+			fileBuf[actualDir++] = (char)arrIndex>>(8*i);
+		if(t == 1)
+			fileBuf[actualDir++] = (char)POPX;
+		else
+			fileBuf[actualDir++] = (char)POPY;
+	}
+	if(!nextToken())
+		return -1;
+	if(lex->getToken() != "]")
+	{
+		std::cout << "invalid token found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+ 		return -1;
+	}
+	return 0;
+}  //int getArrIndex()
+
+
+int compareResult()  // > es 1, >= es 2, < es 3, <= es 4, == es 5, != es 6, -1 es error
+{
+	if(expect(">"))
+		return 1;
+	if(expect(">="))
+		return 2;
+	if(expect("<"))
+		return 3;
+	if(expect("<="))
+		return 4;
+	if(expect("=="))
+		return 5;
+	if(expect("!="))
+		return 6;
+	return -1;
+}  //int compareResult(bool isNot)
+
 int declaration()
 {
 	int tempSize;
 	while(expect("int") || expect("double") || expect("float") || expect("string") || expect("char"))
 	{
-		std::cout << "actual size is " << dataLength << std::endl;
 		std::string temptype = tempToken;
 		do
 		{
@@ -874,6 +1143,8 @@ void fileHeader()
 	tchar = (actualDir+8);
 	fout << tchar;
 
+//	printf("what the fuck is this: %x\n", fileBuf[wtf]);
+
 	for(int i = 0; i < actualDir; i++)
 		fout << fileBuf[i];
 }  //void fileHeader()
@@ -941,3 +1212,14 @@ int init(int argc, char *argv[])
 	}
 	return 0;
 } //void init()
+
+void callCode()
+{
+	for(int i = 0; i < actualDir; i++)
+	{
+		if((i+1)%4 == 0)
+			std::cout << " ";
+		printf("%x ", fileBuf[i]);
+	}
+	std::cout << std::endl << std::endl;
+}  //void callColde()

@@ -26,6 +26,11 @@ void pushvar(int varindex);
 int printVar(int varindex);
 int getArrIndex(int t);
 int print();
+int conditionalStatement();
+int compareResult();
+int logicOperation();
+int makeJumps(int cmpType, bool isNot);
+void callCode();
 
 
 #endif

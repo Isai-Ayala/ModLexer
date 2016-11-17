@@ -35,6 +35,7 @@ int whileStatement();
 int forStatement();
 int read();
 int readVar(int varDir);
+int stringAssignment();
 
 
 #endif

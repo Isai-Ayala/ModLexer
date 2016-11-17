@@ -1,4 +1,22 @@
 BEGIN
-int x;
-x = 5;
+int x, y, z;
+x = 0;
+while(x < 10)
+{
+	println("hola mundo");
+	x++;
+}
+y = 0;
+while(y < x)
+{
+	z = 0;
+	while(z < y)
+	{
+		if(z > (x-y))
+			print("hello world");
+		z++;
+	}
+	println(" ");
+	y++;
+}
 END

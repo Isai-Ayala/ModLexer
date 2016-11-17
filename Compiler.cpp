@@ -39,6 +39,7 @@ struct var
 	unsigned char c;
 	double d;
 	std::string s;
+	int stringSize;
 };
 
 struct tag
@@ -115,6 +116,7 @@ int instruction()
 				return 1;
 			}
 		}
+		return 0;
 	}
 
 	if(isName() == 1)
@@ -180,8 +182,8 @@ int instruction()
 		}
 		return 0;
 	}
-
-	return 0;
+	std::cout << "no valid token found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+	return 1;
 }  //int instruction()
 
 int parsing()
@@ -215,6 +217,7 @@ int parsing()
 
 int codeblock()
 {
+	int checkError = actualDir;
 	while(instruction() != 0)
 	{
 		if(sError)
@@ -225,6 +228,11 @@ int codeblock()
 			return 1;
 		}
 		tempToken = lex->getToken();
+	}
+	if(checkError == actualDir)
+	{
+		std::cout << "invalid token found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+		return 1;
 	}
 	return 0;
 }  //int codeblock()
@@ -312,10 +320,10 @@ int forStatement()
 
 
 	fileBuf[actualDir++] = (unsigned char)JMP;
-	fileBuf[actualDir++] = (unsigned char)InicioBoolExp.dir>>8;
+	fileBuf[actualDir++] = (unsigned char)(InicioBoolExp.dir>>8);
 	fileBuf[actualDir++] = (unsigned char)InicioBoolExp.dir;
 	FinPostCond.dir = actualDir;
-	fileBuf[dirFinCondFinal++] = (unsigned char)FinPostCond.dir>>8;
+	fileBuf[dirFinCondFinal++] = (unsigned char)(FinPostCond.dir>>8);
 	fileBuf[dirFinCondFinal] = (unsigned char)FinPostCond.dir; 
 	if(!nextToken())
 		return -1;
@@ -342,10 +350,10 @@ int forStatement()
 			return -1;
 	}
 	fileBuf[actualDir++] = (unsigned char)JMP;
-	fileBuf[actualDir++] = (unsigned char)InicioPostCond.dir>>8;
+	fileBuf[actualDir++] = (unsigned char)(InicioPostCond.dir>>8);
 	fileBuf[actualDir++] = (unsigned char)InicioPostCond.dir;
 	FinFor.dir = actualDir;
-	fileBuf[dirFinFor++] = (unsigned char)FinFor.dir>>8;
+	fileBuf[dirFinFor++] = (unsigned char)(FinFor.dir>>8);
 	fileBuf[dirFinFor] = (unsigned char)FinFor.dir;
 
 	tags.push_back(InicioBoolExp);
@@ -394,8 +402,14 @@ int whileStatement()
 		
 		while(!expect("}"))
 		{
+			int checkError = actualDir;
 			if(instruction())
 				return -1;
+			if(checkError == actualDir)
+			{
+				std::cout << "invalid token at line " << lex->lineCount << " column " << lex->colCount << std::endl << tempToken << std::endl;
+				return -1;
+			}
 		}
 		if(!nextToken())
 			return -1;
@@ -407,18 +421,15 @@ int whileStatement()
 			return -1;
 	}
 	fileBuf[actualDir++] = (unsigned char)JMP;
-	fileBuf[actualDir++] = (unsigned char)tempTag.dir>>8;
+	fileBuf[actualDir++] = (unsigned char)(tempTag.dir>>8);
 	fileBuf[actualDir++] = (unsigned char)tempTag.dir;
 	tags[ans].dir = actualDir;
 
-	std::cout << "dir1: " << tempdir << "\n";
-	printf("diir: %x\n", ( unsigned char)(actualDir>>8));
-	std::cout << actualDir << "\n";
-	
-	fileBuf[tempdir++] = (unsigned char)actualDir>>8;
-	fileBuf[tempdir] = (unsigned char)actualDir;
+	fileBuf[tempdir++] = (unsigned char)(tags[ans].dir>>8);
+	fileBuf[tempdir] = (unsigned char)(tags[ans].dir);
 	return 0;
 }  //int whileStatement()
+
 void pushvar(int varindex)
 {
 	int tempdir;
@@ -473,7 +484,7 @@ void pushvar(int varindex)
 		}
 		break;
 	}
-	fileBuf[actualDir++] = (unsigned char)tempdir>>8;
+	fileBuf[actualDir++] = (unsigned char)(tempdir>>8);
 	fileBuf[actualDir++] = (unsigned char)tempdir;
 }  //void pushvar()
 
@@ -605,7 +616,7 @@ int read()
 		if(!nextToken())
 			return 1;
 		tempToken = lex->getToken();
-		std::cout << "reads assy instruction\n";
+		//std::cout << "reads assy instruction\n";
 		if(isName() != 1)
 		{
 			std::cout << "no valid id found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
@@ -682,19 +693,34 @@ int readVar(int varindex)
 			break;
 		}
 		case 'd':
-		if(vars[varindex].isArray)
 		{
-			arrIndex = getArrIndex(1);
-			if(arrIndex < 0)
-				return 1;
-			fileBuf[actualDir++] = (unsigned char)RDAD;
+			if(vars[varindex].isArray)
+			{
+				arrIndex = getArrIndex(1);
+				if(arrIndex < 0)
+					return 1;
+				fileBuf[actualDir++] = (unsigned char)RDAD;
+			}
+			else
+				fileBuf[actualDir++] = (unsigned char)RDD;
+			break;
 		}
-		else
-			fileBuf[actualDir++] = (unsigned char)RDD;
-		break;
+		case 's':
+		{
+			if(vars[varindex].isArray)
+			{
+				arrIndex = getArrIndex(1);
+				if(arrIndex < 0)
+					return 1;
+				fileBuf[actualDir++] = (unsigned char)RDAS;
+			}
+			else
+				fileBuf[actualDir++] = (unsigned char)RDS;
+			break;
+		}
 	}
 	tempdir = vars[varindex].dir;
-	fileBuf[actualDir++] = (unsigned char)tempdir>>8;
+	fileBuf[actualDir++] = (unsigned char)(tempdir>>8);
 	fileBuf[actualDir++] = (unsigned char)tempdir;
 	return 0;
 }  //void readVar(int varindex)
@@ -711,7 +737,7 @@ int print()
 		if(!nextToken())
 			return 1;
 		tempToken = lex->getToken();
-		std::cout << "prints assy instruction\n";
+		//std::cout << "prints assy instruction\n";
 		if(expect("\""))
 		{
 			fileBuf[actualDir++] = (unsigned char)((int)PRTM);
@@ -806,19 +832,34 @@ int printVar(int varindex)
 			break;
 		}
 		case 'd':
-		if(vars[varindex].isArray)
 		{
-			arrIndex = getArrIndex(1);
-			if(arrIndex < 0)
-				return 1;
-			fileBuf[actualDir++] = (unsigned char)PRTAD;
+			if(vars[varindex].isArray)
+			{
+				arrIndex = getArrIndex(1);
+				if(arrIndex < 0)
+					return 1;
+				fileBuf[actualDir++] = (unsigned char)PRTAD;
+			}
+			else
+				fileBuf[actualDir++] = (unsigned char)PRTD;
+			break;
 		}
-		else
-			fileBuf[actualDir++] = (unsigned char)PRTD;
-		break;
+		case 's':
+		{
+			if(vars[varindex].isArray)
+			{
+				arrIndex = getArrIndex(1);
+				if(arrIndex < 0)
+					return 1;
+				fileBuf[actualDir++] = (unsigned char)PRTAS;
+			}
+			else
+				fileBuf[actualDir++] = (unsigned char)PRTS;
+			break;
+		}
 	}
 	tempdir = vars[varindex].dir;
-	fileBuf[actualDir++] = (unsigned char)tempdir>>8;
+	fileBuf[actualDir++] = (unsigned char)(tempdir>>8);
 	fileBuf[actualDir++] = (unsigned char)tempdir;
 	return 0;
 }  //void printVar(int varindex)
@@ -989,7 +1030,7 @@ int conditionalStatement()
 	if(expect("else"))
 		tags[ans].dir+=3; 
 	wtf = tempdir;
-	fileBuf[tempdir++] = (unsigned char)tags[ans].dir>>8;
+	fileBuf[tempdir++] = (unsigned char)(tags[ans].dir>>8);
 	fileBuf[tempdir] = (unsigned char)tags[ans].dir;
 	if(expect("else"))
 	{
@@ -1023,7 +1064,7 @@ int conditionalStatement()
 				return -1;
 		}
 		tags[ans].dir = actualDir;
-		fileBuf[tempdir++] = (unsigned char)tags[ans].dir>>8;
+		fileBuf[tempdir++] = (unsigned char)(tags[ans].dir>>8);
 		fileBuf[tempdir] = (unsigned char)tags[ans].dir;
 	}
 	return 0;
@@ -1260,6 +1301,50 @@ int operation()
 	return 0;
 }  //int operation()
 
+int stringAssignment()
+{
+	if(!expect("\""))
+	{
+		if(isName() != 1)
+		{
+			std::cout << "unrecognized string variable name at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+			return 1;
+		}
+		int stringIndex = varDir();
+		if(vars[stringIndex].isArray)
+		{
+			getArrIndex(1);
+			fileBuf[actualDir++] = (unsigned char)PUSHAS;
+		}
+		else
+			fileBuf[actualDir++] = (unsigned char)PUSHS;
+		fileBuf[actualDir++] = (unsigned char)(vars[stringIndex].dir>>8);
+		fileBuf[actualDir++] = (unsigned char)vars[stringIndex].dir;
+	}
+	else
+	{
+		fileBuf[actualDir++] = (unsigned char)PUSHKS;
+		if(!nextToken())
+			return 1;
+		tempToken = lex->getToken();
+		fileBuf[actualDir++] = (unsigned char)tempToken.length();
+		for(int i = 0; i < tempToken.length(); i++)
+			fileBuf[actualDir++] = (unsigned char)tempToken[i];
+		if(!nextToken())
+			return 1;
+		tempToken = lex->getToken();
+		if(!expect("\""))
+		{
+			std::cout << "no closing quotes for string found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+			return 1;
+		}
+	}
+	if(!nextToken())
+		return 1;
+	tempToken = lex->getToken();
+	return 0;
+}  //int stringAssignment()
+
 int assignment()
 {
 	int tempIndex = varDir();
@@ -1271,28 +1356,62 @@ int assignment()
 	gType = vars[tempIndex].type;
 	if(vars[tempIndex].isArray)
 		getArrIndex(2);
-	if(!lex->nextToken() || lex->getToken() != "=" || !lex->nextToken())
+	if(!nextToken())
+		return 1;
+	tempToken = lex->getToken();
+	if(!vars[tempIndex].isArray && gType == 'i' && (expect("++") || expect("--")))
+	{
+		if(expect("++"))
+			fileBuf[actualDir++] = (unsigned char)INC;
+		else
+			fileBuf[actualDir++] = (unsigned char)DEC;
+		fileBuf[actualDir++] = (unsigned char)(vars[tempIndex].dir>>8);
+		fileBuf[actualDir++] = (unsigned char)vars[tempIndex].dir;
+		if(!nextToken())
+			return 1;
+		tempToken = lex->getToken();
+		if(!expect(";"))
+		{
+			std::cout << "no closing semicolon for assignment found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+			return 1;
+		}
+		if(!nextToken())
+			return 1;
+		tempToken = lex->getToken();
+		return 0;
+	}
+	if(tempToken != "=" )
 	{
 		std::cout << "no \"=\" sign found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
 		return 1;
 	}
-	tempToken = lex->getToken();
-	if(operation())
+	if(!nextToken())
 		return 1;
-	std::cout << "popvar assy instruction" << std::endl;
+	tempToken = lex->getToken();
+	if(gType == 's')
+	{
+		if(stringAssignment())
+			return 1;
+	}
+	else
+	{
+		if(operation())
+			return 1;
+	}
+	//std::cout << "popvar assy instruction " << std::endl;
 	if(vars[tempIndex].isArray)
 		fileBuf[actualDir++] = (unsigned char)MOVY;
 	if(pop(tempIndex))
 		return 1;
 	fileBuf[actualDir++] = tempint;
 	tempint = vars[tempIndex].dir;
-	fileBuf[actualDir++] = (unsigned char)tempint>>8;
+	fileBuf[actualDir++] = (unsigned char)(tempint>>8);
 	fileBuf[actualDir++] = (unsigned char)tempint;
 	if(!expect(";"))
 	{
 		if(isFor)
 			return 0;
-		std::cout << "invalid token found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+		std::cout << "no ending semicolon found at line " << lex->lineCount << " column " << lex->colCount << std::endl;
 		return 1;
 	}
 	if(!nextToken())
@@ -1303,6 +1422,9 @@ int assignment()
 
 int getArrIndex(int t) //t == 1 assigning side of equation, t == 2 assigned side of equation
 {
+	int multiplier = 1, tempind = varDir();
+	if(vars[tempind].isArray && vars[tempind].type == 's')
+		multiplier *= vars[tempind].stringSize;
 	if(!nextToken())
 		return -1;
 	if(lex->getToken() != "[")
@@ -1334,23 +1456,21 @@ int getArrIndex(int t) //t == 1 assigning side of equation, t == 2 assigned side
 			if(arrIndex < 0)
 				return -1;
 			fileBuf[actualDir++] = (unsigned char)PUSHAI;
-			fileBuf[actualDir++] = (unsigned char)tempdir>>8;
-			fileBuf[actualDir++] = (unsigned char)tempdir;
-			if(t == 1)
-				fileBuf[actualDir++] = (unsigned char)POPX;
-			else
-				fileBuf[actualDir++] = (unsigned char)POPY;
 		}
 		else
 		{
 			fileBuf[actualDir++] = (unsigned char)PUSHI;
-			fileBuf[actualDir++] = (unsigned char)tempdir>>8;
-			fileBuf[actualDir++] = (unsigned char)tempdir;
-			if(t == 1)
-				fileBuf[actualDir++] = (unsigned char)POPX;
-			else
-				fileBuf[actualDir++] = (unsigned char)POPY;
 		}
+		fileBuf[actualDir++] = (unsigned char)(tempdir>>8);
+		fileBuf[actualDir++] = (unsigned char)tempdir;
+		fileBuf[actualDir++] = (unsigned char)PUSHKI;
+		for(int i = 3; i >= 0; i--)
+			fileBuf[actualDir++] = (unsigned char)(multiplier>>(8*i));
+		fileBuf[actualDir++] = (unsigned char)MUL;
+		if(t == 1)
+			fileBuf[actualDir++] = (unsigned char)POPX;
+		else
+			fileBuf[actualDir++] = (unsigned char)POPY;
 	}
 	else
 	{
@@ -1359,9 +1479,12 @@ int getArrIndex(int t) //t == 1 assigning side of equation, t == 2 assigned side
 			arrIndex *= 10;
 			arrIndex += (int)(tempToken[i]-'0');
 		}
+		for(int i = 3; i >= 0; i--)
+			fileBuf[actualDir++] = (unsigned char)((arrIndex)>>(8*i));
 		fileBuf[actualDir++] = (unsigned char)PUSHKI;
 		for(int i = 3; i >= 0; i--)
-			fileBuf[actualDir++] = (unsigned char)arrIndex>>(8*i);
+			fileBuf[actualDir++] = (unsigned char)(multiplier>>(8*i));
+		fileBuf[actualDir++] = (unsigned char)(MUL);
 		if(t == 1)
 			fileBuf[actualDir++] = (unsigned char)POPX;
 		else
@@ -1376,7 +1499,6 @@ int getArrIndex(int t) //t == 1 assigning side of equation, t == 2 assigned side
 	}
 	return 0;
 }  //int getArrIndex()
-
 
 int compareResult()  // > es 1, >= es 2, < es 3, <= es 4, == es 5, != es 6, -1 es error
 {
@@ -1445,8 +1567,42 @@ int declaration()
 				return -1;
 			}
 			tempVar.name = tempToken;
-			lex->nextToken();
+			if(!nextToken())
+				return 1;
 			tempToken = lex->getToken();
+			if(temptype == "string")
+			{
+				tempVar.type = 's';
+				tempVar.dir = dataLength;
+				tempVar.isArray = false;
+				if(!expect("["))
+				{
+					std::cout << "no size was declared for string variable\n";
+					return 1;
+				}
+				if(!nextToken())
+					return 1;
+				tempToken = lex->getToken();
+				tempSize = atoi(tempToken.c_str());
+				if(tempSize < 0)
+				{
+					std::cout << "invalid size for string\n";
+					return 1;
+				}
+				tempVar.size  = tempSize;
+				tempVar.stringSize = tempSize;
+				if(!nextToken())
+					return 1;
+				tempToken = lex->getToken();
+				if(!expect("]"))
+				{
+					std::cout << "no closing bracket for string size\n";
+					return 1;
+				}
+				if(!nextToken())
+					return 1;
+				tempToken = lex->getToken();
+			}
 			if(expect("["))
 			{
 				tempVar.isArray = true;
@@ -1486,20 +1642,16 @@ int declaration()
 void fileHeader()
 {
 	fout << "(C)CHUNKUN";
-	unsigned char tchar = dataLength>>8;
+	unsigned char tchar = (dataLength>>8);
 	fout << tchar;
 	tchar = dataLength;
 	fout << tchar;
-	tchar = (actualDir+8)>>8;
+	tchar = ((actualDir+8)>>8);
 	fout << tchar;
 	tchar = (actualDir+8);
 	fout << tchar;
 
-	callCode();
-
-	printf("hey code: %x\n", fileBuf[118]);
-	printf("hey code: %x\n", fileBuf[119]);
-	printf("hey code: %x\n", fileBuf[120]);
+	//callCode();
 
 	for(int i = 0; i < actualDir; i++)
 		fout << ( unsigned char)fileBuf[i];
@@ -1574,7 +1726,7 @@ void callCode()
 	for(int i = 0; i < actualDir; i++)
 	{
 		if((i+1)%4 == 0)
-			std::cout << " ";
+			printf("   %x\n", i);
 		printf("%x ", ( unsigned char)fileBuf[i]);
 	}
 	std::cout << std::endl << std::endl;

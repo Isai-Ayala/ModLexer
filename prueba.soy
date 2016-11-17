@@ -1,13 +1,15 @@
 BEGIN
-	int x, y;
-	x = 0;
+int x,y;
+for(y = 0; y < 10; y = y + 1)
+{
+	x = y;
 	while(x < 10)
 	{
-		if(x < 5)
-			println("x = ", x);
-		else
-			println("numero mayor a 4");
+		print(x);
 		x = x + 1;
+		if(x < 10)
+			print(", ");
 	}
-	println("successful loop!");
+	println("  ");
+}
 END

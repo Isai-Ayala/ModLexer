@@ -32,6 +32,9 @@ int logicOperation();
 int makeJumps(int cmpType, bool isNot);
 void callCode();
 int whileStatement();
+int forStatement();
+int read();
+int readVar(int varDir);
 
 
 #endif

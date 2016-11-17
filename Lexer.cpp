@@ -58,6 +58,14 @@ std::string lexer::getToken()
 	line.erase(std::remove(line.begin(), line.end(), '\t'), line.end());
 
 	token = "";
+	if(stringmode && line[colCount] != '"')
+	{
+		while(line[colCount] != '"' && colCount < line.length())
+			token += line[colCount++];
+		if(colCount < line.length())
+			return token;
+		return "error";
+	}
 	while(line[colCount] == ' ' && colCount < line.length())
 	{
 		colCount++;
@@ -74,15 +82,6 @@ std::string lexer::getToken()
 		if(line[colCount] != '\'')
 			return "error";
 		return token;
-	}
-
-	if(stringmode && line[colCount] != '"')
-	{
-		while(line[colCount] != '"' && colCount < line.length())
-			token += line[colCount++];
-		if(colCount < line.length())
-			return token;
-		return "error";
 	}
 
 	if((line[colCount] >= 'a' && line[colCount] <= 'z') || (line[colCount] >= 'A' && line[colCount] <= 'Z'))

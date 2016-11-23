@@ -1,34 +1,5 @@
 BEGIN
-int matriculas[10],tempmat,i,j;
-string nombres[15][10],tempnom[15];
-i = 0;
-while(i < 10)
-{
-	print("ingrese el nombre: ");
-	read(nombres[i]);
-	print("ingrese la matricula: ");
-	read(matriculas[i]);
-	i++;
-}
-i = 0;
-while(i < 9)
-{
-	j = i + 1;
-	while(j < 10)
-	{
-		if(matriculas[j] < matriculas[i])
-		{
-			tempmat = matriculas[j];
-			matriculas[j] = matriculas[i];
-			matriculas[i] = tempmat;
-			tempnom = nombres[j];
-			nombres[j] = nombres[i];
-			nombres[i] = tempnom;
-		}
-		j++;
-	}
-	i++;
-}
-for(i = 0; i < 10; i++;)
-	println("nombre: ", nombres[i], ", matricula: ", matriculas[i]);
+	int x;
+	x = 5%2;
+	println("x = ", x);
 END

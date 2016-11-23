@@ -36,7 +36,7 @@ struct var
 	int size;
 	int i;
 	float f;
-	unsigned char c;
+	char c;
 	double d;
 	std::string s;
 	int stringSize;
@@ -64,9 +64,7 @@ int main(int argc,char *argv[])
 		return 1;
 
 	if(parsing())
-	{
 		return 1;
-	}
 
 	fileHeader();
 
@@ -1191,6 +1189,7 @@ bool expect(std::string token)
 
 int num()
 {
+	bool neg = false;
 	if(expect("("))
 	{
 		if(!nextToken())
@@ -1222,8 +1221,8 @@ int num()
 	{
 		if(!nextToken())
 			return 1;
-		switchstring = "-";
 		tempToken = lex->getToken();
+		neg = true;
 	}
 	if(!isNumber())
 	{
@@ -1253,6 +1252,13 @@ int num()
 	tempToken2 = tempToken;
 	tempToken = switchstring; 
 	pushnumassignment(); 
+	if(neg)
+	{
+		fileBuf[actualDir++] = (unsigned char)PUSHKI;
+		for(int i= 3; i >= 0; i--)
+			fileBuf[actualDir++] = (char)((-1)>>(8*i));
+		fileBuf[actualDir++] = (unsigned char)MUL;
+	}
 	tempToken = tempToken2;
 	return 0;
 }  //int num()
@@ -1262,7 +1268,7 @@ int factor()
 	int mulop;
 	if(num())
 		return 1;
-	while(tempToken == "*" || tempToken == "/" || tempToken == "%%")
+	while(tempToken == "*" || tempToken == "/" || tempToken == "%")
 	{
 		if(tempToken == "*")
 			mulop = 61;
@@ -1345,6 +1351,48 @@ int stringAssignment()
 	return 0;
 }  //int stringAssignment()
 
+int charAssignment()
+{
+	if(expect("'"))
+	{
+		if(!nextToken())
+			return -1;
+		tempToken = lex->getToken();
+		fileBuf[actualDir++] = (unsigned char)PUSHKC;
+		fileBuf[actualDir++] = (char)tempToken[0];
+		if(!nextToken())
+			return -1;
+		tempToken = lex->getToken();
+		if(!expect("'"))
+		{
+			std::cout << "no closing apostrophe for char variable\n";
+			return -1;
+		}
+	}
+	else
+	{
+		if(isName() != 1)
+		{
+			std::cout << "unrecognized variable id at line " << lex->lineCount << " column " << lex->colCount << std::endl;
+			return 1;
+		}
+		int charIndex = varDir();
+		if(vars[charIndex].isArray)
+		{
+			getArrIndex(1);
+			fileBuf[actualDir++] = (unsigned char)PUSHAC;
+		}
+		else
+			fileBuf[actualDir++] = (unsigned char)PUSHC;
+		fileBuf[actualDir++] = (unsigned char)(vars[charIndex].dir>>8);
+		fileBuf[actualDir++] = (unsigned char)(vars[charIndex].dir);
+	}
+	if(!nextToken())
+		return 1;
+	tempToken = lex->getToken();
+	return 0;
+}  //int charAssignment()
+
 int assignment()
 {
 	int tempIndex = varDir();
@@ -1395,8 +1443,16 @@ int assignment()
 	}
 	else
 	{
-		if(operation())
-			return 1;
+		if(gType == 'c')
+		{
+			if(charAssignment())
+				return 1;
+		}
+		else
+		{
+			if(operation())
+				return 1;
+		}
 	}
 	//std::cout << "popvar assy instruction " << std::endl;
 	if(vars[tempIndex].isArray)
@@ -1479,6 +1535,7 @@ int getArrIndex(int t) //t == 1 assigning side of equation, t == 2 assigned side
 			arrIndex *= 10;
 			arrIndex += (int)(tempToken[i]-'0');
 		}
+		fileBuf[actualDir++] = (unsigned char)PUSHKI;
 		for(int i = 3; i >= 0; i--)
 			fileBuf[actualDir++] = (unsigned char)((arrIndex)>>(8*i));
 		fileBuf[actualDir++] = (unsigned char)PUSHKI;
@@ -1520,7 +1577,7 @@ int compareResult()  // > es 1, >= es 2, < es 3, <= es 4, == es 5, != es 6, -1 e
 int declaration()
 {
 	int tempSize;
-	while(expect("int") || expect("double") || expect("float") || expect("string") || expect("unsigned char"))
+	while(expect("int") || expect("double") || expect("float") || expect("string") || expect("char"))
 	{
 		std::string temptype = tempToken;
 		do
@@ -1680,7 +1737,7 @@ void tokenNames()
 	tokens.push_back("-");
 	tokens.push_back("/");
 	tokens.push_back("*");
-	tokens.push_back("%%");
+	tokens.push_back("%");
 	tokens.push_back("int");
 	tokens.push_back("unsigned char");
 	tokens.push_back("float");

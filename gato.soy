@@ -1,0 +1,72 @@
+BEGIN
+	int coordx, coordy;
+	int i,j,bool,turno,temp,contador;
+	int val[9];
+	for(i = 0; i < 9; i++;)
+		val[i] = 0;
+	bool = 0;
+	turno = 1;
+	while(bool == 0)
+	{
+		contador = 0;
+		println("es el turno del jugador ", turno);
+		for(temp = 0; temp == 0; contador = 0;)
+		{
+			print("coordenada x: ");
+			read(coordx);
+			print("coordenada y: ");
+			read(coordy);
+			coordy--;
+			temp = coordy*3+coordx-1;
+			if(val[temp] == 0)
+			{
+				val[temp] = turno;
+				temp = 1;
+			}
+			else
+			{		
+				println("espacio ocupado!");
+			}
+		}
+		for(i = 0; i < 5; i++;)
+		{
+			if(i != 1 && i != 3)
+				print(" ");
+			for(j = 0; j < 6; j++;)
+			{
+				if(i == 1 || i == 3)
+				{
+					print("--");
+				}
+				else	
+				{
+					if(j == 1 || j == 3)
+					{
+						print(" | ");
+					}
+					else
+					{
+						if(j != 5)
+						{
+							if(val[contador] == 1)
+								print("X");
+							else
+								if(val[contador] == 2)
+									print("O");
+								else
+									print(" ");
+							contador++;
+						}
+						else
+							print(" ");
+					}
+				}
+			}
+			println(" ");
+		}
+		if(turno == 1)
+			turno++;
+		else
+			turno--;
+	}
+END

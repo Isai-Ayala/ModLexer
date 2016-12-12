@@ -16,7 +16,6 @@
 
 enum COMMANDS {HALT, PRTCR, PRTC, PRTI, PRTF, PRTD, PRTS, PRTAC, PRTAI, PRTAF, PRTAD, PRTAS, PUSHC, PUSHI, PUSHF, PUSHD, PUSHS, PUSHAC, PUSHAI, PUSHAF, PUSHAD, PUSHAS, PUSHKC, PUSHKI, PUSHKF, PUSHKD, PUSHKS, POPC, POPI, POPF, POPD, POPS, POPX, POPAC, POPAI, POPAF, POPAD, POPAS, RDC, RDI, RDF, RDD, RDS, RDAC, RDAI, RDAF, RDAD, RDAS, JMP, JMPEQ, JMPNE, JMPGT, JMPGE, JMPLT, JMPLE, STX, STKX, INC, DEC, ADD, SUB, MUL, DIV, MOD, CMP, PRTM, MOVY, POPY};
 
-int wtf;
 bool isFor = false;
 std::string tempToken;
 std::ofstream fout;
@@ -198,6 +197,7 @@ int parsing()
 				if(codeblock())
 					return 1;
 			}
+			fileBuf[actualDir++] = (unsigned char)HALT;
 			return 0;
 		}
 		else
@@ -1027,7 +1027,6 @@ int conditionalStatement()
 	tags[ans].dir = actualDir;
 	if(expect("else"))
 		tags[ans].dir+=3; 
-	wtf = tempdir;
 	fileBuf[tempdir++] = (unsigned char)(tags[ans].dir>>8);
 	fileBuf[tempdir] = (unsigned char)tags[ans].dir;
 	if(expect("else"))
@@ -1617,7 +1616,7 @@ int declaration()
 			}
 			if(!nextToken())
 				return 1;
-				tempToken = lex->getToken();
+			tempToken = lex->getToken();
 			if(isName())
 			{
 				std::cout << "\"" << tempToken << "\" is already a reserved keyword, line: " << lex->lineCount << " column: " << lex->colCount << std::endl;

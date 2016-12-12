@@ -44,11 +44,12 @@ bool lexer::nextToken()
 {
 	if( line.compare("") && colCount < line.length())
 		return true;
-	if(getline(ifs, line))
+	while(getline(ifs, line))
 	{
 		colCount = 0;
 		lineCount++;
-		return true;
+		if( line.compare("") && colCount < line.length())
+				return true;
 	}
 	return false;
 }  //bool nextToken()

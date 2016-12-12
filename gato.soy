@@ -10,23 +10,24 @@ BEGIN
 	{
 		contador = 0;
 		println("es el turno del jugador ", turno);
-		for(temp = 0; temp == 0; contador = 0;)
+		print("coordenada x: ");
+		read(coordx);
+		print("coordenada y: ");
+		read(coordy);
+		coordy--;
+		temp = coordy*3+coordx-1;
+		if(val[temp] == 0)
 		{
-			print("coordenada x: ");
-			read(coordx);
-			print("coordenada y: ");
-			read(coordy);
-			coordy--;
-			temp = coordy*3+coordx-1;
-			if(val[temp] == 0)
-			{
-				val[temp] = turno;
-				temp = 1;
-			}
+			val[temp] = turno;
+			temp = 1;
+		}
+		else
+		{		
+			println("espacio ocupado!");
+			if(turno == 1)
+				turno++;
 			else
-			{		
-				println("espacio ocupado!");
-			}
+				turno--;
 		}
 		for(i = 0; i < 5; i++;)
 		{
